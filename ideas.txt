@@ -1,3 +1,12 @@
 Updater 
 Members 
-Single file download installer
+Single file download installer ✓
+
+
+add headers to message content so legacy messages will be compatible with later updates
+as they can still be identified even if their format does not match the new messages
+for example
+version 1
+username:"bobmarley",message_text:"hello world",datetime:"2023,april,12"
+version 3
+user_hash:"b0bmar1ey",permissions:"admin",message_text:"hello world",datetime:"2023,april,12"
