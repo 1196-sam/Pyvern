@@ -20,12 +20,31 @@ print("""
 ############################
 """)
 
+def ServerSetup():
+    files = os.listdir('.')
+    if 'backup.txt' in files:
+        print('message backup found')
+        if 'config.json' in files:
+            print('Server config file found.')
+        else:
+            open('config.json','w')
+            print('config file not found...\nOne has been created for you in the current directory.')
+            ServerSetup()
+    else:
+        open('backup.txt','w')
+        print('No backup file found...\n One has been created for you in the current directory.')
+        ServerSetup()
+
 mode = input('Please type "Y" for server, "N" for client. \n The default is SERVER\n>')
 
 match mode.lower():
     case "y":
-        print('server') # ADD SERVER LATER
+        ServerSetup() # ADD SERVER LATER
     case "n":
         print("client") # ADD CLIENT LATER
     case other:
         print('server') # ADD SERVER LATER
+
+
+
+print('Server created')
