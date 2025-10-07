@@ -21,13 +21,14 @@ print("""
 """)
 
 def ServerSetup():
-    os.system("curl -O https://raw.githubusercontent.com/1196-sam/py-lan-chat/refs/heads/main/many%20socket%20server.py")
+    os.system("curl -O https://raw.githubusercontent.com/1196-sam/py-lan-chat/refs/heads/main/server.py")
     import server
     files = os.listdir('.')
     if 'backup.txt' in files:
         print('message backup found')
         if 'config.json' in files:
             print('Server config file found.')
+            server.run()
         else:
             open('config.json','w')
             print('config file not found...\nOne has been created for you in the current directory.')
