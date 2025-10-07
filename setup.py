@@ -9,7 +9,7 @@ except ImportError:
 
 # Run pip install
 print("Installing required packages...")
-os.system("curl -O https://raw.githubusercontent.com/1196-sam/py-lan-chat/main/requirements.txt")
+os.system("curl -O https://raw.githubusercontent.com/1196-sam/py-lan-chat/refs/heads/main/requirements.txt")
 os.system(f"{sys.executable} -m pip install -r requirements.txt")
 print("All dependencies installed!")
 
@@ -19,43 +19,57 @@ print("""
 # Welcome to PyChat Setup! #
 ############################
 """)
-
+serverrantime = 0
 def ServerSetup():
-    os.system("curl -O https://raw.githubusercontent.com/1196-sam/py-lan-chat/refs/heads/main/server.py")
-    import server
-    files = os.listdir('.')
-    if 'backup.txt' in files:
-        print('message backup found')
-        if 'config.json' in files:
-            print('Server config file found.')
-            server.run()
+    global serverrantime
+    if serverrantime == 0:
+        print("Downloading Server Files...")
+        os.system("curl -O https://raw.githubusercontent.com/1196-sam/py-lan-chat/refs/heads/main/server.py")
+    else:
+        import server
+        files = os.listdir('.')
+        if 'backup.txt' in files:
+            print('message backup found')
+            if 'config.json' in files:
+                print('Server config file found.')
+                server.run()
+            else:
+                open('config.json','w')
+                print('config file not found...\nOne has been created for you in the current directory.')
+                serverrantime += 1
+                ServerSetup()
         else:
-            open('config.json','w')
-            print('config file not found...\nOne has been created for you in the current directory.')
+            open('backup.txt','w')
+            print('No backup file found...\n One has been created for you in the current directory.')
+            serverrantime += 1
             ServerSetup()
-    else:
-        open('backup.txt','w')
-        print('No backup file found...\n One has been created for you in the current directory.')
-        ServerSetup()
 
+
+
+clientrantime = 0
 def ClientSetup():
-    print('Downloading Client Files...')
-    os.system("curl -O https://raw.githubusercontent.com/1196-sam/py-lan-chat/refs/heads/main/chat.py")
-    import chat
-    files = os.listdir('.')
-    if 'secret.json' in files:
-        print('Token found')
-        if 'userconfig.json' in files:
-            print('User generated config found.')
-            chat.run()
-        else:
-            print('User config not found.\n Generating...')
-            open('userconfig.json',"w")
-            ClientSetup()
-    else:
-        print('Token not found...\n Generating file for token when conected to server.')
-        open('secret.json','w')
+    global clientrantime
+    if clientrantime == 0:
+        print('Downloading Client Files...')
+        os.system("curl -O https://raw.githubusercontent.com/1196-sam/py-lan-chat/refs/heads/main/chat.py")
+        clientrantime += 1
         ClientSetup()
+    else:
+        import chat
+        files = os.listdir('.')
+        if 'secret.json' in files:
+            print('Token found')
+            if 'userconfig.json' in files:
+                print('User generated config found.')
+                chat.run()
+            else:
+                print('User config not found.\n Generating...')
+                open('userconfig.json',"w")
+                ClientSetup()
+        else:
+            print('Token not found...\n Generating file for token when conected to server.')
+            open('secret.json','w')
+            ClientSetup()
 
 
 
