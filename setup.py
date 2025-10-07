@@ -47,8 +47,7 @@ def ServerSetup():
         answer = input('Would you like to start the Server now?(Answer "Y" or "N")\n>')
         match answer.lower():
             case "y":
-                import server
-                server.run()
+                os.system(f"{sys.executable} server.py")
             case "n":
                 print('Ok, Server not started. Exiting Setup...')
             case other:
