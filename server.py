@@ -223,14 +223,14 @@ try:
                 save_tokens(tokens)
                 print(f"Updated identity for {provided_token}: {user['username']}#{user['tag']}")
 
-            print(f"✅ Authenticated as {user['username']}#{user['tag']}")
+            print(f"Authenticated as {user['username']}#{user['tag']}")
             return provided_token, "authenticated"
 
         # Invalid token
         print(f"Invalid token: {provided_token}")
         return None, "invalid_token"
-
-
+    while True:
+        None
     """
     while True:#main
         if sockets[len(sockets)] == []:
