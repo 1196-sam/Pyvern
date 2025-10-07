@@ -1,9 +1,16 @@
 def run():
     try:
-        import os,random,datetime,traceback,socket,threading
+        import os,random,datetime,traceback,socket,threading,string
         from datetime import datetime
         #server
         self = "server"
+        
+        def gentoken():
+            import random,string
+            length = 16
+            token = ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+            print(token)
+        gentoken()
 
 
         class chat():
@@ -12,13 +19,13 @@ def run():
                 self.messages = []
                 self.users = []
 
-        receive_data(csc_):#receive message sent to server and send it to all users
-            while True:
-            data = csc.recv(1024)
-            for s in sockets:
-                s.send(data)
-            if data:
-                messages.append(data.decode())
+        # # receive_data(csc_):#receive message sent to server and send it to all users
+        #     while True:
+        #     data = csc.recv(1024)
+        #     for s in sockets:
+        #         s.send(data)
+        #     if data:
+        #         messages.append(data.decode())
         
         send_chat(csc_,messages): #when user connects, send them the chat so far
             y = str(messages)
@@ -58,19 +65,17 @@ def run():
             count += 1
             socket_port += 1
             print(len(sockets))
+    
         
+
+
+
     except Exception as error:
         traceback.print_exc()
         
+
         
-
-
-
-
-
-
-
-
+run()
 
 
 

@@ -28,7 +28,6 @@ user_hash:"b0bmar1ey",permissions:"admin",message_text:"hello world",datetime:"2
 default config
 
 Ports range 
-Single file download installer ✓
 Updater loaded by server. 
 Reconnecting after discontect
 error logging 
@@ -36,3 +35,6 @@ error logging
 Ping server get port number back.
 Server conf
 auto reconfig (when config is changed) 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# COMPLETED 
+Single file download installer ✓
