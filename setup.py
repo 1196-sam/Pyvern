@@ -1,6 +1,6 @@
 import os
 import sys
-
+import chat
 # Check if pip is available
 try:
     import pip
@@ -35,15 +35,33 @@ def ServerSetup():
         print('No backup file found...\n One has been created for you in the current directory.')
         ServerSetup()
 
+def ClientSetup():
+    files = os.listdir('.')
+    if 'secret.json' in files:
+        print('Token found')
+        if 'userconfig.json' in files:
+            print('User generated config found.')
+            chat.run()
+        else:
+            print('User config not found.\n Generating...')
+            open('userconfig.json',"w")
+            ClientSetup()
+    else:
+        print('Token not found...\n Generating file for token when conected to server.')
+        open('secret.json','w')
+        ClientSetup()
+
+
+
 mode = input('Please type "Y" for server, "N" for client. \n The default is SERVER\n>')
 
 match mode.lower():
     case "y":
-        ServerSetup() # ADD SERVER LATER
+        ServerSetup()
     case "n":
-        print("client") # ADD CLIENT LATER
+        ClientSetup()
     case other:
-        print('server') # ADD SERVER LATER
+        ServerSetup()
 
 
 
