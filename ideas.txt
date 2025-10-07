@@ -14,7 +14,9 @@ Uploadable background
 confetti
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-# Back end 
+# Back end
+keep a single port open use it as a handshake like a default access port. the user connects for a brief moment so the server can assign them their own unique port then they disconnect from the default port and connect to the assigned one
+
 add headers to message content so legacy messages will be compatible with later updates
 as they can still be identified even if their format does not match the new messages
 for example
