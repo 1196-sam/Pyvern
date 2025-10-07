@@ -1,6 +1,5 @@
 import os
 import sys
-import chat
 # Check if pip is available
 try:
     import pip
@@ -10,6 +9,7 @@ except ImportError:
 
 # Run pip install
 print("Installing required packages...")
+os.system("curl -O https://raw.githubusercontent.com/1196-sam/py-lan-chat/main/requirements.txt")
 os.system(f"{sys.executable} -m pip install -r requirements.txt")
 print("All dependencies installed!")
 
@@ -21,6 +21,8 @@ print("""
 """)
 
 def ServerSetup():
+    os.system("curl -O https://raw.githubusercontent.com/1196-sam/py-lan-chat/refs/heads/main/many%20socket%20server.py")
+    import server
     files = os.listdir('.')
     if 'backup.txt' in files:
         print('message backup found')
@@ -36,6 +38,9 @@ def ServerSetup():
         ServerSetup()
 
 def ClientSetup():
+    print('Downloading Client Files...')
+    os.system("curl -O https://raw.githubusercontent.com/1196-sam/py-lan-chat/refs/heads/main/chat.py")
+    import chat
     files = os.listdir('.')
     if 'secret.json' in files:
         print('Token found')
