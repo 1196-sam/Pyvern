@@ -17,6 +17,15 @@ try:
             sys.stdout.write(f"\r{message} ✓\n")
             sys.stdout.flush()
 
+    def get_local_ip():
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+        finally:
+            s.close()
+        return ip
+
     print("\033c")
     spin("Starting server", 3)
     print("\033c")
@@ -44,7 +53,7 @@ try:
                                                                   
     '''
     lines = logo.strip('\n').splitlines()
-
+    
     for line in lines:
         print(line)
         time.sleep(0.1) 
@@ -55,14 +64,6 @@ try:
             self.messages = []
             self.users = []
 
-    def get_local_ip():
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            s.connect(("8.8.8.8", 80))
-            ip = s.getsockname()[0]
-        finally:
-            s.close()
-        return ip
 
     def receive_data(csc_):#receive message sent to server and send it to all users
         while True:
@@ -97,7 +98,8 @@ try:
             chats.append(new)
 
     server_ip = get_local_ip()
-    
+    print(f"You are running on {server_ip} for a quick connection, ask users to use this IP to connect to.`")
+
     login_port = 55000
     
     ports = []

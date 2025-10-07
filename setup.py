@@ -80,8 +80,7 @@ def ClientSetup():
         answer = input('Would you like to start the Chat now?(Answer "Y" or "N")\n>')
         match answer.lower():
             case "y":
-                import chat
-                chat.run()
+                os.system(f"{sys.executable} chat.py")
             case "n":
                 print('Ok, chat not started. Exiting Setup...')
             case other:

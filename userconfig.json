@@ -1,0 +1,13 @@
+{
+  "username": "Alice",
+  "network": {
+    "tcp_port": 55000,
+    "scan_timeout": 0.4
+  },
+  "appearance": {
+    "font_name": "Arial",
+    "background_color": [0, 0, 0],
+    "text_color": [0, 255, 0],
+    "input_background": [40, 40, 40]
+  }
+}

@@ -6,7 +6,7 @@ CONFIG_PATH = "userconfig.json"
 default_config = {
     "username": "User",
     "network": {
-        "tcp_port": 5050,
+        "tcp_port": 55000,
         "scan_timeout": 0.4
     },
     "appearance": {
@@ -51,25 +51,13 @@ def get_local_ip():
 
 def try_connect_subnet(local_ip):
     """Scan subnet for open server."""
-    subnet = ".".join(local_ip.split(".")[:-1]) + "."
-    print("searching all available ips")
-    print(f"[SCAN] Searching {subnet}0–255 for active servers...")
-    for i in range(0,255):  # adjustable range     ####PRINT I
-        target = subnet + str(i)
-        if target == local_ip:
-            continue
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(SCAN_TIMEOUT)
-        try:
-            s.connect((target, TCP_PORT))
-            print(f"[CLIENT] Connected to server at {target}")
-            return s
-        except (socket.timeout, ConnectionRefusedError):
-            s.close()
-            continue
-        except Exception as e:
-            print(f"[DEBUG] Connection error to {target}: {e}")
-            s.close()
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(SCAN_TIMEOUT)
+    try:
+        s.connect(('192.168.0.19', 55000))
+        return s
+    except (socket.timeout, ConnectionRefusedError):
+        s.close()
     return None
 
 def start_server(local_ip):
@@ -164,7 +152,7 @@ def run_chat(conn):
 # === MAIN ===
 if __name__ == "__main__":
     try:
-        local_ip = get_local_ip()
+        local_ip = '192.168.0.19'
         print(f"[INFO] Local IP: {local_ip}")
         conn = try_connect_subnet(local_ip)
         if not conn:
