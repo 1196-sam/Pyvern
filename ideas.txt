@@ -1,6 +1,7 @@
 # Front End 
 Members 
 Black Jack, Uno, and Games 
+asteroids
 Scribbl
 Channels 
 Drawing
@@ -10,6 +11,7 @@ User conf
 Customisable interface
 animated backgrounds
 Uploadable background 
+confetti
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 # Back end 
@@ -27,4 +29,6 @@ Updater loaded by server.
 Reconnecting after discontect
 error logging 
 
+Ping server get port number back.
 Server conf
+auto reconfig (when config is changed) 
