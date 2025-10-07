@@ -42,7 +42,6 @@ try:
  \______/  \_______/|__/          \_/    \_______/|__/            
                                                                   
                                                                   
-
     '''
     lines = logo.strip('\n').splitlines()
 
@@ -119,6 +118,7 @@ try:
             global login_port
             global sockets
             while True:
+                print("Starting....")
                 new = connection()
                 main_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 main_socket.bind((server_ip,login_port))
@@ -139,6 +139,7 @@ try:
         except:
             traceback.print_exc()
             
+    print("Starting Thread...")
     thread = threading.Thread(target=assignment,args=(), daemon=True)
     thread.start()
 
