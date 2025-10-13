@@ -1,7 +1,7 @@
 import pygame, socket, threading, traceback, sys,json
 from datetime import datetime
 CONFIG_PATH = "userconfig.json"
-
+token = "secret.json"
 # Default fallback config (if file missing or broken)
 default_config = {
     "username": "User",
@@ -33,6 +33,14 @@ BG_COLOR = tuple(user_config.get("appearance", {}).get("background_color", defau
 TEXT_COLOR = tuple(user_config.get("appearance", {}).get("text_color", default_config["appearance"]["text_color"]))
 INPUT_BG = tuple(user_config.get("appearance", {}).get("input_background", default_config["appearance"]["input_background"]))
 
+
+try:
+    with open("secret.json", "r") as f:
+        token = json.load(f)
+except Exception as e:
+    print(f"[WARN] Could not load token, asking server for a new one.({e})")
+    
+
 allowed_inputs = ["a","b","c","d","e","f","g","h","i","j","k","l","m"
                   "n","o","p","q","r","s","t","u","v","w","x","y","z"
                   "0","1","2","3","4","5","6","7","8","9",",",":","("
@@ -54,7 +62,7 @@ def try_connect_subnet(local_ip):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(SCAN_TIMEOUT)
     try:
-        s.connect(('192.168.0.19', 55000))
+        s.connect(('192.168.0.73', 55000))
         return s
     except (socket.timeout, ConnectionRefusedError):
         s.close()
@@ -152,7 +160,7 @@ def run_chat(conn):
 # === MAIN ===
 if __name__ == "__main__":
     try:
-        local_ip = '192.168.0.19'
+        local_ip = '192.168.0.73'
         print(f"[INFO] Local IP: {local_ip}")
         conn = try_connect_subnet(local_ip)
         if not conn:
