@@ -12,6 +12,7 @@ Customisable interface
 animated backgrounds
 Uploadable background 
 confetti
+connect 4
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 # Back end

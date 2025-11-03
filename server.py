@@ -16,19 +16,6 @@ try:
         finally:
             sys.stdout.write(f"\r{message} ✓\n")
             sys.stdout.flush()
-
-    def get_local_ip():
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            s.connect(("8.8.8.8", 80))
-            ip = s.getsockname()[0]
-        finally:
-            s.close()
-        return ip
-
-    print("\033c")
-    spin("Starting server", 3)
-    print("\033c")
     logo = '''
  /$$$$$$$                                                         
 | $$__  $$                                                        
@@ -52,11 +39,16 @@ try:
                                                                   
                                                                   
     '''
-    lines = logo.strip('\n').splitlines()
+    lines = logo.strip('\n').splitlines()     
+    quick_boot = True
+    if not quick_boot:
+        print("\033c")
+        spin("Starting server", 3)
+        print("\033c")
     
-    for line in lines:
-        print(line)
-        time.sleep(0.1) 
+        for line in lines:
+            print(line)
+            time.sleep(0.1) 
 
     class chat():
         def __init_(self):
@@ -64,6 +56,14 @@ try:
             self.messages = []
             self.users = []
 
+    def get_local_ip():
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+        finally:
+            s.close()
+        return ip
 
     def receive_data(csc_):#receive message sent to server and send it to all users
         while True:
@@ -98,8 +98,7 @@ try:
             chats.append(new)
 
     server_ip = get_local_ip()
-    print(f"You are running on {server_ip} for a quick connection, ask users to use this IP to connect to.`")
-
+    
     login_port = 55000
     
     ports = []
@@ -109,10 +108,14 @@ try:
 
     class connection:
         def __init__(self):
+            self.type = "blank"
             self.socket = ""
-            self.csc = ""
+            self.csc = 97
             self.address = ""
-
+    
+    # -----------------------------
+    # Connection handshake
+    # -----------------------------
     def assignment():
         try:
             global ports
@@ -120,7 +123,6 @@ try:
             global login_port
             global sockets
             while True:
-                print("Starting....")
                 new = connection()
                 main_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 main_socket.bind((server_ip,login_port))
@@ -130,22 +132,22 @@ try:
                 ports.remove(port)
                 csc.send(str(port).encode())
                 new.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                new.socket.bind((server_ip,port))
+                new.socket.listen(16)
+                csc,address = new.socket.accept()
+                new.csc = csc
+                new.address = address
                 sockets.append(new)
-                index = len(sockets)-1
-                sockets[index].socket.bind((server_ip,port))
-                sockets[index].socket.listen(16)
-                csc,address=sockets[index].socket.accept()
-                sockets[index].csc = csc
-                sockets[index].address = address
+                print("user connected, cuurent users:"+str(len(sockets)))
                 main_socket.close()
         except:
             traceback.print_exc()
+
+    #def check_connection():
+                    
             
-    print("Starting Thread...")
     thread = threading.Thread(target=assignment,args=(), daemon=True)
     thread.start()
-
-        
 
     TOKEN_FILE = 'token.json'
 
@@ -225,30 +227,27 @@ try:
                 save_tokens(tokens)
                 print(f"Updated identity for {provided_token}: {user['username']}#{user['tag']}")
 
-            print(f"Authenticated as {user['username']}#{user['tag']}")
+            print(f"✅ Authenticated as {user['username']}#{user['tag']}")
             return provided_token, "authenticated"
 
         # Invalid token
         print(f"Invalid token: {provided_token}")
         return None, "invalid_token"
-    while True:
-        None
-    """
+
+    flag = False
     while True:#main
-        if sockets[len(sockets)] == []:
-            sockets.append(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
-            server_ip = '127.0.0.1'
-            sockets[count] = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sockets[count].bind((server_ip,socket_port))
-            sockets[count].listen(16)
-        
-            csc, address=sockets[0].accept()
-            #send_chat(csc_,messages)
-            count += 1
-            socket_port += 1
-    """
-            
-except Exception as error:
+        try:
+            if sockets:
+                data = sockets[0].csc.recv(2048)
+                flag = True
+                print(data)
+            else:
+                if not flag:
+                    flag = True
+                    print("waiting for connection")
+        except Exception as e:
+            traceback.print_exc()
+except:
     traceback.print_exc()
     
         
@@ -282,3 +281,4 @@ except Exception as error:
 
 
     
+
