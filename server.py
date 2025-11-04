@@ -13,47 +13,69 @@ try:
         finally:
             s.close()
         return ip
-    
+        
     TOKENS_FILE = "tokens.txt"
     TOKENS_BACKUP = "tokens_backup.txt"
+
+    # Default token that's always available
+    DEFAULT_TOKENS = {
+        "default": {
+            "token": "0",
+            "created": "PC"
+        },
+    }
+
     def load_tokens():
+        # Try to load main tokens file
         if Path(TOKENS_FILE).exists():
-            with open(TOKENS_FILE, 'r') as f:
-                try:
+            try:
+                with open(TOKENS_FILE, 'r') as f:
                     load = json.load(f)
-                    f.close()
-                    with open(TOKENS_BACKUP,"w") as file:
-                        json.dump(load, file, indent=2)
-                        file.close()
-                    return(load)
-                except:
-                    print("marker alpha")
-                    traceback.print_exc()
-                    f.close()
-                    print("tokens file corrupt, loading backup...")
-                    if TOKENS_BACKUP in os.listdir("."):
-                        with open (TOKENS_BACKUPS,"r") as file:
+                
+                # Backup the good file
+                with open(TOKENS_BACKUP, "w") as file:
+                    json.dump(load, file, indent=2)
+                
+                return load
+                
+            except Exception as e:
+                traceback.print_exc()
+                print("tokens file corrupt, loading backup...")
+                
+                # Try to load backup
+                if Path(TOKENS_BACKUP).exists():
+                    try:
+                        with open(TOKENS_BACKUP, "r") as file:
                             load = json.load(file)
-                            file.close()
+                        
                         print("backup found, restoring main file from backup")
-                        with open(TOKENS_FILE,"w") as file:
-                            json.dump(tokens, file, indent=2)
-                            return(load)
-                    else:
-                        return()
-        else:
-            if TOKENS_BACKUP in os.listdir("."):
-                with open (TOKENS_BACKUPS,"r") as file:
+                        with open(TOKENS_FILE, "w") as file:
+                            json.dump(load, file, indent=2)
+                        
+                        return load
+                    except:
+                        print("backup also corrupt, using default")
+        
+        # Main file doesn't exist or is corrupt
+        if Path(TOKENS_BACKUP).exists():
+            try:
+                with open(TOKENS_BACKUP, "r") as file:
                     load = json.load(file)
-                    file.close()
-                print("tokens file missing, restoring tokens from backup")
-                with open(TOKENS_FILE,"w") as file:
-                    json.dump(tokens, file, indent=2)
-                    return(load)
-            else:
-                open("tokens.txt","w")
-                return()    
-        return {}
+                
+                print("restoring from backup")
+                with open(TOKENS_FILE, "w") as file:
+                    json.dump(load, file, indent=2)
+                
+                return load
+            except:
+                print("backup corrupt, using default")
+        
+        # Nothing works, create and return default
+        print("no valid tokens file, creating default")
+        with open(TOKENS_FILE, "w") as f:
+            json.dump(DEFAULT_TOKENS, f, indent=2)
+        
+        return DEFAULT_TOKENS
 
     def save_tokens(tokens):
         with open(TOKENS_FILE, 'w') as f:
@@ -248,3 +270,4 @@ except:
 
 
     
+
