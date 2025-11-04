@@ -39,3 +39,23 @@ auto reconfig (when config is changed)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # COMPLETED 
 Single file download installer ✓
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+current infrastruture
+
+
+# Connection
+server boots✓
+User connects to default socket by finding current ip.✓
+Sever assigns socket not in use ✓
+
+# User Server hand shake
+Client starts with registering a username and if theres a token that. 
+If no token the server generates a token, checks in the database, then gives it to the client. 
+
+
+
+
+
+
