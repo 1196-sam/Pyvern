@@ -90,9 +90,5 @@
   "expocakeman": {
     "token": "fpRDnJAJxBtbLgZRyDSha5RKmvhbLcv4wKStl8nPvFE",
     "created": "laptop"
-  },
-  "kdm": {
-    "token": "fpRDnJAJxBtbLgZRyDSha5RKmvhbLcv4wKStl8nPvFE",
-    "created": "laptop"
   }
 }

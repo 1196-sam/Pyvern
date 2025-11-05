@@ -154,7 +154,7 @@ try:
     login_port = 55000
     ports = []
     
-    for i in range(55000,55050):
+    for i in range(55001,55051):
         ports.append(i)
 
     class connection:
@@ -162,18 +162,33 @@ try:
             self.socket = ""
             self.conn = ""
             self.address = ""
+            self.thread = ""
+            
+    connected_users = []
     
     # -----------------------------
     # Connection handshake
     # -----------------------------
+    messages = []
+    new_messages = []
+    def listening(conn):
+        global new_messages
+        global sockets
+        while True:
+            data = conn.recv(2048)
+            if data:
+                new_messages.append(data.decode())
+    
     def assignment():
         try:
             global ports
             global server_ip
             global login_port
+            global connected_users
             global sockets
             while True:
                 #make blank connection object
+                print("Waiting for new connection...")
                 new = connection()
                 main_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 main_socket.bind((server_ip,login_port))
@@ -202,39 +217,27 @@ try:
                 username = handle_handshake(new.conn, tokens)
                 
                 if username:
-                    with new.conn:
-                        while True:
-                            try:
-                                data = conn.recv(2048)
-                                if not data:
-                                    break
-                                print(f"{username}: {data.decode()}")
-                                new.conn.sendall(f"Echo: {data.decode()}".encode())
-                            except:
-                                break
-                        print(f"{username} disconnected")
-                else:
-                    conn.close()                
-                print("Waiting for new connection...")
+                    connected_users.append(username)
+
+                    new_thread = threading.Thread(target=listening,args=(new.conn,), daemon=True)
+                    new.thread = new_thread
+                    new.thread.start()
                 
         except:
             print("marker charlie")
             traceback.print_exc()
                     
+
     thread = threading.Thread(target=assignment,args=(), daemon=True)
     thread.start()
 
 
-
-
-
-
-
-
-    flag = False
-    while True:#main
-        None
-     
+    while True:
+        if messages != new_messages:
+            for user in sockets:
+                messages = new_messages.copy()
+                user.conn.send(messages[len(messages)-1].encode())
+    
 except:
     print("marker delta")
     traceback.print_exc()

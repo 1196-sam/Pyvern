@@ -99,10 +99,11 @@ try:
         print(f"[SCAN] Searching for active servers...")
         while loop:
             result = try_connect_subnet(local_ip)
-            conn = result[0]
-            server_ip = result[1]
-            if conn:
-                loop = False
+            if result:
+                conn = result[0]
+                server_ip = result[1]
+                if conn:
+                    loop = False
     open("server_ip.txt","w").write(server_ip)
 
     loop = True
