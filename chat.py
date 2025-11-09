@@ -106,14 +106,6 @@ try:
                     loop = False
     open("server_ip.txt","w").write(server_ip)
 
-    loop = True
-    s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    while loop:
-        port = conn.recv(1024)
-        s.connect((server_ip,int(port.decode())))
-        conn.close()
-        loop = False
-
     token = ""
     try:
         open("token.txt","x")
@@ -143,9 +135,8 @@ try:
             f.write(token)
 
     handshake = f"HANDSHAKE {username}:{token}"
-    s.send(handshake.encode())
-
-    response = s.recv(1024).decode()
+    conn.send(handshake.encode())
+    response = conn.recv(1024).decode()
     print(f"Server response: {response}")
     print(response)
     if response.startswith("OK"):
@@ -161,8 +152,8 @@ try:
             message = input("You: ")
             if message.lower() == 'quit':
                 break
-            s.send(message.encode())
-            data = s.recv(1024)
+            conn.send(message.encode())
+            data = conn.recv(1024)
             print(f"Server: {data.decode()}")
     else:
         print("Authentication failed")
