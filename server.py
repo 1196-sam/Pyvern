@@ -149,13 +149,9 @@ try:
             conn.send(f"ERROR {str(e)}".encode())
             return None    
             
-    sockets = []
+    users = []
     server_ip = get_local_ip()
     login_port = 55000
-    ports = []
-    
-    for i in range(55001,55051):
-        ports.append(i)
 
     class connection:
         def __init__(self):
@@ -169,74 +165,82 @@ try:
     # -----------------------------
     # Connection handshake
     # -----------------------------
-    messages = []
-    new_messages = []
-    def listening(conn):
-        global new_messages
-        global sockets
-        while True:
-            data = conn.recv(2048)
-            if data:
-                new_messages.append(data.decode())
+    messages = Queue()
     
+    def listening(user):
+        global messages
+        global users
+        global connected_users
+
+        try:
+            with user.conn as conn:
+                while True:
+                    data = conn.recv(2048)
+                    if not data:
+                        break  # graceful disconnect
+
+                    # Instead of append → use put
+                    messages.put((user, data.decode()))
+
+        except Exception as e:
+            print(f"user {getattr(user, 'address', '?')} disconnected unexpectedly: {e}")
+
+        finally:
+            if user in users:
+                users.remove(user)
+            if hasattr(user, "username") and user.username in connected_users:
+                connected_users.remove(user.username)
+            print(f"user disconnected, current users: {len(users)}")
+
+    #if user authentication fails, manage the error, either disconnect or new username
+    #if user disconnects, maybe try reconnect? or just kick em
+    #update pygame gui
+
     def assignment():
         try:
-            global ports
             global server_ip
             global login_port
             global connected_users
-            global sockets
+            global users
+
+            main_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            main_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            main_socket.bind((server_ip, login_port))
+            main_socket.listen(16)
+            print(f"Server listening on {server_ip}:{login_port}")
+
             while True:
-                #make blank connection object
                 print("Waiting for new connection...")
                 new = connection()
-                main_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                main_socket.bind((server_ip,login_port))
-                main_socket.listen(16)
-                
-                conn,address=main_socket.accept()#new user connects to server
-                #assign port to user         
-                port = random.choice(ports)
-                ports.remove(port)
-                conn.send(str(port).encode())
-                #make new socket for user using assigned port
-                new.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                new.socket.bind((server_ip,port))
-                new.socket.listen(16)
-                conn,address = new.socket.accept()#user accepts new connection
-                #assign attributes to user connection object
+                conn, address = main_socket.accept()
                 new.conn = conn
                 new.address = address
-                sockets.append(new)
-
-                print("user connected, curent users:"+str(len(sockets)))
-
-                main_socket.close()
-                
+                users.append(new)
+                print("User connected, current users: " + str(len(users)))
                 tokens = load_tokens()
                 username = handle_handshake(new.conn, tokens)
-                
                 if username:
                     connected_users.append(username)
-
-                    new_thread = threading.Thread(target=listening,args=(new.conn,), daemon=True)
+                    new_thread = threading.Thread(target=listening, args=(new,), daemon=True)
                     new.thread = new_thread
                     new.thread.start()
-                
+
         except:
             print("marker charlie")
             traceback.print_exc()
                     
-
     thread = threading.Thread(target=assignment,args=(), daemon=True)
     thread.start()
 
 
     while True:
-        if messages != new_messages:
-            for user in sockets:
-                messages = new_messages.copy()
-                user.conn.send(messages[len(messages)-1].encode())
+        try:
+            sender, msg = messages.get()
+            for user in users:
+                if user != sender:
+                    user.conn.send(msg.encode())
+        except Exception as e:
+            print("error sending message", e)
     
 except:
     print("marker delta")
