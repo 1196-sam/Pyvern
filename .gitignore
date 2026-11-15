@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.py[cod]
+
+/token.json
+/token*.txt
+/tokens*.json
+/users.json
+/channels.json
+/settings.json

@@ -1,162 +1,265 @@
-try:
-    import os,time,sys,random,datetime,traceback,socket,threading,json,string
-    from datetime import datetime
-    from queue import Queue
+
+"""Chat client. Run:  uv run chat.py   (or: pip install websockets colorama && python chat.py)"""
+import asyncio
+import atexit
+import json
+import os
+import re
+import secrets
+import shutil
+import signal
+import sys
+import threading
+import time
+from collections import deque
+from pathlib import Path
+from urllib.parse import quote
+
+import websockets
+from colorama import Back, Fore, Style, just_fix_windows_console
+from websockets.exceptions import ConnectionClosed, InvalidStatus
+
+just_fix_windows_console()
+
+DEFAULT_SERVER = "0.0.0.0:8765"
+TOKEN_FILE = Path(__file__).with_name("token.json")
+NAME_RE = re.compile(r"[A-Za-z0-9_-]{1,20}")
+
+ESC = "\033"
+RST = Style.RESET_ALL
+NAME_COLORS = [Fore.LIGHTCYAN_EX, Fore.LIGHTYELLOW_EX, Fore.LIGHTMAGENTA_EX,
+               Fore.LIGHTBLUE_EX, Fore.LIGHTRED_EX]
+
+BANNER = '''
+  ▄▄▄▄▄▄     ▄▄▄       ▄▄▄         ▄▄▄▄▄▄▄   ▄▄▄▄▄▄      ▄▄     ▄▄▄
+ █▀██▀▀▀█▄  █▀██  ██  █▀██  ██▀▀  █▀██▀▀▀   █▀██▀▀▀█▄    ██▄   ██▀
+   ██▄▄▄█▀    ██  ██    ██  ██      ██        ██▄▄▄█▀    ███▄  ██
+   ██▀▀▀      ██  ██    ██  ██      ████      ██▀▀█▄     ██ ▀█▄██
+ ▄ ██         ██  ██    ██▄ ██      ██      ▄ ██  ██     ██   ▀██
+ ▀██▀         ▀█████▄    ▀███▀      ▀█████  ▀██▀  ▀██▀ ▀██▀    ██
+              ▄   ██
+              ▀████▀
+'''
+
+
+def ask(label):
+    print(label)
+    return input("> ").strip()
+
+
+def load_identity():
+    """Load saved identity or create one."""
     try:
-        server_ip = open("server_ip.txt","r").read().strip()
-    except:
-        open("server_ip.txt","w")
-        server_ip = ""
-    connected = False
-    if server_ip:
-        try:
-            socket.inet_aton(server_ip)
-            print("Cached server ip found at " + server_ip+ ", attempting connection")
-            conn=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            conn.settimeout(5)
-            server_port=55000
-            try:
-                conn.connect((server_ip,server_port))
-                print("connected sucessfully to "+ server_ip)
-                connected = True
-            except socket.timeout:
-                print("connection timed out, searching for server...")
-        except:
-            print("saved ip address unavailable, searching for server on local subnet")
-            
-    if not connected:    
-        TCP_PORT = 55000
-        SCAN_TIMEOUT = 0.4
+        d = json.loads(TOKEN_FILE.read_text())
+        if d.get("server") and d.get("name") and d.get("token"):
+            return d, False
+    except (FileNotFoundError, ValueError):
+        pass
+    server = DEFAULT_SERVER or ask("server (IP:port or wss://host)")
+    name = ask("name")
+    while not NAME_RE.fullmatch(name):
+        print("1-20 characters: letters, numbers, _ or -")
+        name = ask("name")
+    d = {"server": server, "name": name, "token": secrets.token_urlsafe(24)}
+    TOKEN_FILE.write_text(json.dumps(d, indent=2))
+    try:
+        os.chmod(TOKEN_FILE, 0o600)
+    except OSError:
+        pass
+    return d, True
 
-        def get_local_ip():
-            """Get the active LAN IP."""
-            conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            try:
-                conn.connect(("8.8.8.8", 80))
-                ip = conn.getsockname()[0]
-            finally:
-                conn.close()
-            return ip
 
-        def scan_range(subnet, local_ip, start, end, result_queue, stop_event):
-            """Scans a subrange of IPs in a subnet."""
-            for i in range(start, end):
-                if stop_event.is_set():
-                    break  # stop if another thread found a connection
+def safe(text):
+    """Remove terminal control characters."""
+    return "".join(ch for ch in str(text) if ch.isprintable())
 
-                target = subnet + str(i)
-                
-                conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                conn.settimeout(SCAN_TIMEOUT)
-                try:
-                    conn.connect((target, TCP_PORT))
-                    print(f" Connected to server at {target}")
-                    result_queue.put((conn,target))
-                    stop_event.set()  # signal success to other threads
-                    return
-                except (socket.timeout, ConnectionRefusedError):
-                    conn.close()
-                except Exception as e:
-                    print(f"[DEBUG] Error connecting to {target}: {e}")
-                    conn.close()
-            # no connection found in this range
+
+class UI:
+    def __init__(self, name):
+        self.name = name
+        self.channel = None
+        self.color = sys.stdout.isatty()
+        self.fancy = self.color and sys.stdin.isatty()
+        self.active = False
+        self.history = deque(maxlen=300)
+        self.rows, self.cols = 24, 80
+
+    def _w(self, s):
+        sys.stdout.write(s)
+        sys.stdout.flush()
+
+    def c(self, text, *codes):
+        return "".join(codes) + text + RST if self.color else text
+
+    def start(self):
+        if self.fancy:
+            self.active = True
+            self.layout()
+
+    def layout(self):
+        size = shutil.get_terminal_size((80, 24))
+        self.cols, self.rows = size.columns, max(size.lines, 10)
+        R = self.rows
+        self._w(f"{ESC}[2J{ESC}[r{self._header()}{ESC}[2;{R - 3}r")
+        for line in list(self.history)[-(R - 4):]:
+            self._w(f"{ESC}[{R - 3};1H\n{line}")
+
+    def on_resize(self):
+        if self.active:
+            self.layout()
+            self.prompt()
+
+    def stop(self):
+        if self.active:
+            self.active = False
+            self._w(f"{ESC}[r{ESC}[{self.rows - 2};1H{ESC}[J{RST}")
+
+    def _header(self):
+        left = f" #{self.channel} " if self.channel else " connecting... "
+        right = f" {self.name} · /help · /exit "
+        pad = max(1, self.cols - len(left) - len(right))
+        text = (left + " " * pad + right)[: self.cols]
+        return f"{ESC}[1;1H{Back.BLUE}{Fore.WHITE}{Style.BRIGHT}{text}{RST}"
+
+    def prompt(self):
+        if not self.active:
             return
+        R = self.rows
+        self._w(
+            f"{ESC}[{R - 2};1H{ESC}[2K{Style.DIM}{'─' * self.cols}{RST}"
+            f"{ESC}[{R - 1};1H{ESC}[2K{Style.BRIGHT}{Fore.LIGHTGREEN_EX}{self.name}:{RST}"
+            f"{ESC}[{R};1H{ESC}[2K> "
+        )
 
-        def try_connect_subnet(local_ip, num_threads=32):
-            subnet = ".".join(local_ip.split(".")[:-1]) + "."
-
-            # Setup coordination tools
-            result_queue = Queue()
-            stop_event = threading.Event()
-            threads = []
-
-            # Split IP range (0–255) into roughly equal chunks
-            chunk_size = 256 // num_threads
-            for t in range(num_threads):
-                start = t * chunk_size
-                end = 255 if t == num_threads - 1 else (t + 1) * chunk_size
-                thread = threading.Thread(
-                    target=scan_range,
-                    args=(subnet, local_ip, start, end, result_queue, stop_event),daemon=True)
-                threads.append(thread)
-                thread.start()
-
-            # Wait for all threads or an early success
-            for thread in threads:
-                thread.join()
-
-            # If any connection succeeded, return that socket
-            if not result_queue.empty():
-                return result_queue.get()
-
-            print("no active servers found")
-            return None
-
-        local_ip = get_local_ip()
-
-        # --- MAIN ---
-        loop = True
-        print(f"[SCAN] Searching for active servers...")
-        while loop:
-            result = try_connect_subnet(local_ip)
-            if result:
-                conn = result[0]
-                server_ip = result[1]
-                if conn:
-                    loop = False
-    open("server_ip.txt","w").write(server_ip)
-
-    token = ""
-    try:
-        open("token.txt","x")
-        
-        if "token_backup.txt" in os.listdir("."):
-            token = open("token_backup.txt","r").read()
-            
-            open("token.txt","w").write(token)
-
-            print("token restored from backup")
+    def set_channel(self, channel):
+        self.channel = channel
+        if self.active:
+            self._w(f"{ESC}7{self._header()}{ESC}8")
         else:
-            print("Token file created.")
-    except:
-        print("token found.")
-        token = open("token.txt","r").read()
+            self.add_line(self.c(f"-- you are in #{channel} --", Style.DIM))
 
-    username = input("Enter username: ")
-    
+    def add_line(self, text):
+        self.history.append(text)
+        if self.active:
+            self._w(f"{ESC}7{ESC}[{self.rows - 3};1H\n{text}{ESC}8")
+        else:
+            print(text, flush=True)
 
-    if not token:
-        token = "NONE"
+    def stamp(self, ts):
+        return self.c(time.strftime("%H:%M", time.localtime(ts)), Style.DIM)
 
-    def save_token(token):
-        with open('token.txt','w') as f:
-            f.write(token)
-        with open('token_backup.txt','w') as f:
-            f.write(token)
+    def chat(self, ts, name, text, own=False):
+        name, text = safe(name), safe(text)
+        color = Fore.LIGHTGREEN_EX if own else NAME_COLORS[sum(map(ord, name)) % len(NAME_COLORS)]
+        who = self.c("You" if own else name, Style.BRIGHT, color)
+        self.add_line(f"{self.stamp(ts)} {who}: {text}")
 
-    handshake = f"HANDSHAKE {username}:{token}"
-    conn.send(handshake.encode())
-    response = conn.recv(1024).decode()
-    print(f"Server response: {response}")
-    print(response)
-    if response.startswith("OK"):
-        print("Authentication successful!")
+    def system(self, ts, text):
+        self.add_line(f"{self.stamp(ts)} {self.c(safe(text), Fore.YELLOW)}")
 
-        if "REGISTERED" in response:
-            parts = response.split()
-            if len(parts) == 3: 
-                new_token = parts[2]
-                save_token(new_token)
 
+async def chat(ws, ui):
+    loop = asyncio.get_running_loop()
+    ui.start()
+    atexit.register(ui.stop)
+    if hasattr(signal, "SIGWINCH"):
+        loop.add_signal_handler(signal.SIGWINCH, ui.on_resize)
+    for line in BANNER.strip("\n").splitlines():
+        ui.add_line(ui.c(line, Fore.CYAN))
+    ui.add_line(ui.c("Connected. Type a message, /help for commands, /exit to quit.", Style.DIM))
+    ui.prompt()
+
+    lines = asyncio.Queue()
+
+    def reader():
         while True:
-            message = input("You: ")
-            if message.lower() == 'quit':
+            line = sys.stdin.readline()
+            loop.call_soon_threadsafe(lines.put_nowait, line or None)
+            if not line:
+                return
+
+    threading.Thread(target=reader, daemon=True).start()
+
+    def handle(raw):
+        try:
+            f = json.loads(raw)
+        except ValueError:
+            ui.system(time.time(), raw)
+            return
+        ts = f.get("ts") or time.time()
+        kind = f.get("t")
+        if kind == "chat":
+            ui.chat(ts, f.get("name", "?"), f.get("text", ""))
+        elif kind == "channel":
+            ui.set_channel(safe(f.get("channel", "")))
+        else:
+            ui.system(ts, f.get("text", ""))
+
+    async def receive():
+        async for raw in ws:
+            handle(raw)
+
+    recv = asyncio.create_task(receive())
+    reason = "Bye."
+    try:
+        while True:
+            get = asyncio.create_task(lines.get())
+            done, _ = await asyncio.wait({get, recv}, return_when=asyncio.FIRST_COMPLETED)
+            if get not in done:
+                get.cancel()
+                reason = "Disconnected from server."
                 break
-            conn.send(message.encode())
-            data = conn.recv(1024)
-            print(f"Server: {data.decode()}")
-    else:
-        print("Authentication failed")
-            
-except:
-    traceback.print_exc()
+            line = get.result()
+            if line is None:
+                break
+            line = line.strip()
+            if line in ("/exit", "/quit"):
+                break
+            if line == "/token":
+                token = json.loads(TOKEN_FILE.read_text())["token"]
+                ui.add_line(ui.c(f"Your token: {token}", Fore.YELLOW))
+                ui.prompt()
+                continue
+            if line:
+                await ws.send(line)
+                if not line.startswith("/"):
+                    ui.chat(time.time(), ui.name, line, own=True)
+            ui.prompt()
+    finally:
+        recv.cancel()
+        await asyncio.gather(recv, return_exceptions=True)
+        ui.stop()
+    print(reason)
+
+
+async def main():
+    ident, fresh = load_identity()
+    addr = DEFAULT_SERVER or ident["server"]
+    base = addr if addr.startswith(("ws://", "wss://")) else f"ws://{addr}"
+    url = f"{base.rstrip('/')}/?name={quote(ident['name'])}"
+    try:
+        async with websockets.connect(
+            url, additional_headers={"Authorization": f"Bearer {ident['token']}"}, ping_interval=20
+        ) as ws:
+            await chat(ws, UI(ident["name"]))
+    except InvalidStatus as e:
+        if e.response.status_code != 401:
+            print(f"Server replied with HTTP {e.response.status_code}")
+        elif fresh:
+            TOKEN_FILE.unlink(missing_ok=True)
+            print("That name is taken. Run again and pick another.")
+        else:
+            print("Server rejected this name/token. Delete token.json to start over with a new name.")
+    except ConnectionClosed:
+        print("Disconnected.")
+    except OSError as e:
+        if fresh:
+            TOKEN_FILE.unlink(missing_ok=True)
+        print(f"Can't connect: {e}")
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, EOFError):
+        pass
